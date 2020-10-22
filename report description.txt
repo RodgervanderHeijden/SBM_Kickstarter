@@ -1,0 +1,30 @@
+The research assignment enables students to deepen their knowledge of one of the topics discussed in class. More specific, the assignment allows students to develop research questions which accounts for recent theoretical insights in the Strategy and Business Model field and allows students to empirically investigate that research questions through state-of-the-art data-science methods. Student groups (5 students per group) choose one of the six course topics to formulate those research questions. Please think about the topics that you would prefer to work on directly after all topics have been lectured. We aim to have at least one group for each topic, and will impose a maximum on the most popular topics. The topics are assigned on the first come, first served basis. The topics are: 
+
+    Resource-based view, order of entry 
+    Competitive strategy 
+    Business models 
+    Revenue models 
+    Demand-based view, network effects  
+    Platforms 
+
+The research report describes your research in a rigorous manner. Its structure mimics that of a typical academic article, so have a close look at papers published in scientific journals for inspiration, for instance those published in the reading list. Generally, the structure of the research report will look something like this: 
+
+Introduction 
+
+[Introduce the topic, explain why it is interesting (the research gap and the practical relevance), and formulate the research question.] 
+
+Theory and hypotheses 
+
+[Explain the state of art in the relevant literature, building towards what is it exactly that you would like to research, consistent with your research question and research gap. If your research design allows for it, develop at most 4 hypotheses based on the theoretical framework you covered: what is it that you expect to see in the data, and why?] 
+
+Methods and data 
+
+[Describe the data set that you used, the way you translated the raw data into variables, and the methods you used to analyze the data (e.g., cluster analysis, regression analysis, panel data analysis, time series). Remember that most methods have a number of assumptions that you have to check prior to doing the analyses. Certain assumption violations can be fixed by transforming the focal variables, e.g. the dependent variable, in case of other violations you may need to choose a different method] 
+
+Results 
+
+[Present the results of your analyses including descriptive statistics, regression tables, as well as any possible figures or visualizations that you made, e.g. those of the interaction effects.] 
+
+Discussion 
+
+[What did we learn from what you found in your results, how do those findings relate to the ongoing debate in literature, and what can practitioners learn from that?] 

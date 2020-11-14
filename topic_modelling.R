@@ -2,6 +2,7 @@
 #### Be sure you have installed all these packages
 #### (Work in a Rstudio that is installed in your pc to avoid problems with the package instalation)
 
+
 library(stm)
 library(dplyr)
 library(tidytext)
@@ -12,18 +13,25 @@ library(ggplot2)
 library(furrr)
 library(stminsights)
 library(quanteda)
+library(igraph)
 
+rm(list=ls())
 #Load the data
-data = read.csv("C:/Users/s153832/Desktop/JADS/Master/Semester_1.1/Strategy_and_Business_Models/Assignment/final_clean_data.csv", header = TRUE)
+data = read.csv("C:/Users/s153832/Desktop/JADS/Master/Semester_1.1/Strategy_and_Business_Models/Assignment/final_data.csv", header = TRUE)
 print(paste("number of observations:",length(data$my_id))) #9713
+
+set.seed(8) #For reproducabilitiy
 
 #prepare the data.
 #it is already lowercased, stemmed, without punctuation/URLs/emails/sparse terms, more than 50 words, and checked for language
 #language checker is not great, so just check again here
-processed<- textProcessor(data$clean,metadata=data,lowercase=FALSE, removestopwords=FALSE, removenumbers=FALSE, 
-                          removepunctuation=FALSE, stem=FALSE,  
+processed<- textProcessor(data$clean,metadata=data,lowercase=FALSE, removestopwords=FALSE, removenumbers=FALSE,
+                          removepunctuation=FALSE, stem=FALSE,
                           language="en",verbose=TRUE, onlycharacter= FALSE, striphtml=FALSE
                           ,customstopwords=FALSE)
+
+
+
 
 #plot how many documents/words/tokens would be removed based on a threshold of amount of documents a words should appear in
 plotRemoved(processed$documents, lower.thresh = seq(1,10, by = 1))
@@ -36,84 +44,129 @@ vocab <- out$vocab
 meta <- out$meta
 
 #run the actual STM, for K topics, including characteristics for prevalence and/or content
-stmFit <- stm(documents = out$documents, vocab = out$vocab, K=20, data = meta,verbose=TRUE,
-               #max iterations
-               max.em.its = 20,
-               #see a preview of the topics every X iterations
-               reportevery=5,
-               #the prevalence characteristics
-               #whether it is a rockstar or a flop, the goal, duration, update frequency based on literature, 
-               #and amount of sparse terms that are removed (we assume this is a good way to measure amount of spelling mistakes)
-               prevalence = ~ Goal_USD + duration + update_freq + sparse_terms,
-               #the content characteristics
-               content = ~ categorical,
-               #leave the seed and init type
-               seed=123456789, init.type = "Spectral"
-               )
-
+stmFit <- stm(documents = out$documents, vocab = out$vocab, K=25, data = meta,verbose=TRUE,
+              #max iterations
+              max.em.its = 100,
+              #see a preview of the topics every X iterations
+              reportevery=5,
+              #the prevalence characteristics
+              #whether it is a rockstar or a flop, the goal, duration, update frequency based on literature, 
+              #and amount of sparse terms that are removed (we assume this is a good way to measure amount of spelling mistakes)
+              prevalence = ~ Goal_USD + duration + update_freq + sparse_terms,
+              #the content characteristics
+              #leave the seed and init type
+              seed=123456789, init.type = "Spectral"
+)
 
 #this is the topic prevalence matrix in a dataframe
 topic_prevalence <- data.frame(
   stmFit$theta)
 #put this in a csv
-#write.csv(topic_prevalence,"C:/Users/s153832/Desktop/JADS/Master/Semester_1.1/Strategy_and_Business_Models/Assignment/20_ellen_20.csv", row.names = FALSE)
+#write.csv(topic_prevalence,"C:/Users/s153832/Desktop/JADS/Master/Semester_1.1/Strategy_and_Business_Models/Assignment/topic_prevalence.csv", row.names = FALSE)
 
+topic <- data.frame(
+  TopicNumber = 1:25,
+  TopicProportions = colMeans(stmFit$theta))
 #check the effects of the characteristics on determining each topic
 #you can see if it is significant
 #change formula to 1:#topics, and the variables to the variables you checked
-effects <- estimateEffect(formula = 1:20 ~categorical + Goal_USD + duration + update_freq + sparse_terms, stmobj = stmFit,
-               metadata = out$meta, uncertainty = "Global")
-summary(effects)
-
-#plot the topics and see whether they are more likely to be flop or rockstars
-Result <- plot(
-  effects,
-  "categorical",
-  method = "difference",
-  cov.value1 = "3",
-  cov.value2 = "1",
-  verbose.labels = F,
-  ylab = "Expected Difference in Topic Probability by Category (with 95% CI)",
-  xlab = "More Likely Flop                           Not Significant                       More Likely Rockstar",
-  main = "Effect of Rockstar/Flop on Topic Prevelance for Kickstarter Research",
-  xlim = c(-0.1, 0.1)
-)
-
-# order this plot based on Expected Topic Proportion
-rank = order(unlist(Result$means))
-topicRnk <- topic[rank, ]
-
-plot(
-  effects,
-  "categorical",
-  method = "difference",
-  cov.value1 = "3",
-  cov.value2 = "1",
-  verbose.labels = F,
-  topics = topicRnk$TopicNumber,
-  #labeltype = "custom",
-  #custom.labels  = apply(topicNames$prob, 1, function(x) paste0(x, collapse = " + ")),
-  ylab = "Expected Difference in Topic Probability by Category (with 95% CI)",
-  xlab = "More Likely Flop                           Not Significant                       More Likely Rockstar",
-  main = "Effect of Rockstar/Flop on Topic Prevelance for Kickstarter Research",
-  xlim = c(-0.1, 0.1)
-)
+effectestimates <- estimateEffect(formula = 1:25 ~categorical + Goal_USD + duration + update_freq + sparse_terms, stmobj = stmFit,
+                          metadata = out$meta, uncertainty = "Global")
+summary(effectestimates)
 
 
 #INSPECT THE TOPICS
-plot(stmFit, n=5,labeltype = "frex", topics = 1:15, type="summary")
-plot(stmFit, n=5,labeltype = "frex", topics = 1:15, type="hist")
+plot(stmFit, n=5,topics = 1:25, type="summary")
+plot(stmFit, n=5,topics = 1:25, type="hist")
  
 #with the function labelTopics we generate sets of words that represent each topic, using 4 different labelling algorithms. These measures are done from the Betas.
 labelTopics(stmFit,n=10)
  
 #one can compare the words often used by two topics
-plot(stmFit, n=20,labeltype = "frex", topics = c(8,4),  type="perspectives")
+plot(stmFit, n=20,topics = c(1,4),  type="perspectives")
 
 
 #Sigma: covariance matrix. 
 plot(topicCorr(stmFit, method='huge'),cutoff=0.1)
 
 #Theta: Topic proportions.
-barplot(stmFit$theta[1,],names.arg = paste("t",1:20)) #Example: the first document belongs to topic8 with a proportion greater than 0.35.
+barplot(stmFit$theta[3,],names.arg = paste("t",1:25)) #Example: the first document belongs to topic8 with a proportion greater than 0.35.
 
+#Compute the correlations between the topics. 
+#With $theta you access the number of documents by numer of topics matrix of topic proportions from a model estimated with stm()
+cor_matrix <- cor(stmFit$theta) 
+
+#Determine threshold for correlations to be shown, e.g. 0.5. Other values in the correlation matrix are set to 0
+cor_matrix[cor_matrix < 0.0001] <- 0
+diag(cor_matrix) <- 0 #Set the diagonal values from 1 to 0
+
+
+g <- graph.adjacency(cor_matrix, mode="undirected", weighted=T) #Create an undirected graph with weighted edges
+E(g) #Edge sequence of edge IDs
+edges <- get.edgelist(g) #Create the adjacency list of the edges
+edge_correlations <- rep(NA, nrow(edges)) #Empty placeholder
+#Loop through all edge combinations and fill the placeholders with the values
+for(i in 1:nrow(edges)-1){
+  edge_correlations[i] <- cor(stmFit$theta)[edges[i,1],edges[i,2]]
+}
+
+#Some settings of the edges that you can adjust
+E(g)$weight
+E(g)$size <- 1
+E(g)$lty <- 1
+E(g)$color <- "black"
+
+
+estimations <- plot(
+  effectestimates,
+  "categorical",
+  method = "difference",
+  cov.value1 = "1",
+  cov.value2 = "3",
+  verbose.labels = F,
+  ylab = "Expected Difference in Topic Probability by Subject (with 95% CI)",
+  xlab = "More Likely Flop                           Not Significant                       More Likely Rockstar",
+  main = "Effect of Subject on Topic Prevelance for UNCC Research",
+  xlim = c(-0.1, 0.1)
+)
+#Use the mean for each topic from the plot.estimateEffect() function
+#Use the feature you want to use to color the vertices (e.g. rockstar/flop projects)
+#So first run estimateEffect(), then use its output as input for plot.estimateEffect()
+effects2<- unlist(lapply(estimations$means,function(x){return(x[1])}))
+#Set the colors that you want to use. The last number determines the amount of intervals created (currently 5)
+colors <- rev(colorRampPalette(c("green", "white", "purple"), bias=1)(5)) 
+
+#Now set the sequence related to the colors
+#Sequence is 1 value longer than the value above (6 in case of 5)
+#E.g. effect sizes are between -0.3 and 03
+sequence <- c(-0.05, -0.02, -0.005, 0.005, 0.02, 0.05)
+
+color_category <- rep(NA,length(effects2)) #Placeholder for color of each topic
+
+#Loop through the topics and assign a color based on effect size
+colcat <- vector(mode = "list", length = 25)
+for(i in 1:length(color_category)-1){
+  color_category[i] <- max(which(effects2[i] > sequence))
+}
+
+#Create the visual
+#Replace 20 by your number of topics
+plot(effects2,1:25,pch=19,cex=2,col=colors[color_category]);abline(v=0)
+topicnames <- c('Vehicles', 'Writing?', 'Cycling', 'Charging', 'Farming', 'Video?', 'Filming', 'Drones', 'Photography?', 'Boards', 'Pets & Plants', 'Experiences', 'Energy', 'Sleeping', 'Gadgets', 'Body', 'Fluids', 'Science?', 'Cats', 'Cleaning', 'Tech Education', 'Coding', 'Celebrations?', 'Electrical Circuits', 'Smart Home') #Assign your topic labels
+V(g)$label=topicnames #Label vertices in graph with topic names
+topic_proportions <- c() #Assign the mean proportion of each topic
+V(g)$size <- topic_proportions*200 #Make size of vertices proportional to topic proportion in corpus, e.g. by factor 200
+
+#Some additional layout settings
+vertex.color = colors[color_category]
+vertex.label.cex = 1
+vertex.label.color = "black"
+edge.color = "gray60"
+edge.width = 3
+weights <- E(g)$weight
+
+graph_layout <- layout.fruchterman.reingold(g,weight=weights) #Graph layout function
+#Save the graph as pdf in current directory
+# pdf("correlationNetwork.pdf",16,16) 
+plot(g, layout=graph_layout,edge.color=edge.color, vertex.color=vertex.color, vertex.label.cex=vertex.label.cex, vertex.label.color=vertex.label.color, edge_correlations = edge.width)
+# dev.off()

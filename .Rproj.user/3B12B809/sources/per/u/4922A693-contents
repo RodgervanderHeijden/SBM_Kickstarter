@@ -1,2 +1,0 @@
-df = read.csv("../SBM - Kickstarter/pledge_week21.csv")
-df
